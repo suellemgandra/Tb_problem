@@ -45,21 +45,22 @@ def create_model(inst):
 
     #(1) Colisão de professor: professor não pode lecionar mais de uma aula em um mesmo horário
     for p, professor in professors.iterrows():
-        for d, day in days.iterrows():
-            for t, time in times.iterrows():
-                model.add_constr(xsum(x[c, p, d, t]
-                                      for c, class_credit in class_credits.iterrows()
-                                      if professor['Nome'] == class_credit['Professor']) <=
-                                1, name=f"1_{p},{d},{t}")
+        for c, class_credit in class_credits.iterrows():
+            if professor['Nome'] == class_credit['Professor']:
+                for d, day in days.iterrows():
+                    model.add_constr(xsum(x[c, p, d, t]
+                                          for t, time in times.iterrows())
+                                             <= 1, name=f"1_{p},{d},{t}")
 
     #(2) Sobreposição de professores: Em um dia d e horário h, uma turma c tem aula no máximo com um  único professor:
-    for c, class_credit in class_credits.iterrows():
-        for d, day in days.iterrows():
-            for t, time in times.iterrows():
-                model.add_constr(xsum(x[c, p, d, t]
-                                      for p, professor in professors.iterrows()
-                                      if professor["Nome"] == class_credit["Professor"])
-                                 <= 1, name=f"2_")
+    for p, professor in professors.iterrows():
+        for c, class_credit in class_credits.iterrows():
+            if professor["Nome"] == class_credit["Professor"]:
+                for d, day in days.iterrows():
+                    model.add_constr(xsum(x[c, p, d, t]
+                                          for t, time in times.iterrows()
+                                         )
+                                     <= 1, name=f"2_")
 
     #(3) Carga horária: Cada professor p deve ministrar exatamente um certo número de aulas semanais para uma dada turma c:
     for c, class_credit in class_credits.iterrows():
@@ -85,15 +86,6 @@ def create_model(inst):
                                <=
                              int(max_c_d['Máximo diário de aulas']), name=f"4_{c}{p}")
 
-    # for c, class_credit in class_credits.iterrows():
-    #     for p, professor in professors.iterrows():
-    #         if professor["Nome"] == class_credit["Professor"]:
-    #             for d, day in days.iterrows():
-    #                 for md, max_c_d in max_class_day.iterrows():
-    #                     model.add_constr(xsum(x[c, p, d, t]
-    #                         for t, time in times.iterrows()) ==
-    #                         int(max_c_d['Máximo diário de aulas']), name=f"4_{c}{p}")
-
     # #(5) Corresponde as indisponibilidades dos professores: Estas restriçõees encontram-se contempladas ao utilizarmos
     # # a matriz ri_pdt nas restrições (1)
 
@@ -106,7 +98,6 @@ def create_model(inst):
 
 def print_active_vars(tt_model):
     for i in range(len(tt_model.model.vars)):
-        # print(tt_model.model.vars[i].x)
         if tt_model.model.vars[i].x > 0.001:
             print(tt_model.model.vars[i].name, tt_model.model.vars[i].x)
 
@@ -148,3 +139,4 @@ inst_teste = glob.glob('dataset/*.csv')
 teste = read_instance(inst_teste)
 tt_model = create_model(teste)
 print_active_vars(tt_model)
+
